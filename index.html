@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mezclas Compatibilizador SFF | SF Fertilizantes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <!-- SheetJS para exportación e importación real de Excel (.xlsx) y CSV -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-badge">SFF</div>
+        <div>
+          <h1>Mezclas Compatibilizador SFF</h1>
+          <p>Base de Datos de Ensayos de Compatibilidad · SF Fertilizantes</p>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <button id="btnOpenModal" class="btn btn-primary">
+          <span>+ Nueva Mezcla</span>
+        </button>
+        <div class="dropdown">
+          <button id="btnExportMenu" class="btn btn-secondary">
+            Exportar / Compartir ▾
+          </button>
+          <div id="exportDropdown" class="dropdown-menu hidden">
+            <button id="btnExportExcel">Descargar Excel (.xlsx)</button>
+            <button id="btnExportCSV">Descargar CSV (.csv)</button>
+            <button id="btnExportJSON">Exportar Base JSON (ensayos.json)</button>
+            <hr />
+            <label class="file-import-label">
+              Importar respaldo JSON
+              <input type="file" id="inputImportJSON" accept=".json" hidden />
+            </label>
+            <button id="btnExportPortable">Descargar App Portable (.html)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- KPIs dinámicos -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">Ensayos Visibles / Total</span>
+        <strong id="kpiTotal" class="kpi-value">0 / 0</strong>
+      </div>
+      <div class="kpi-card kpi-ok">
+        <span class="kpi-label">OK Estables</span>
+        <strong id="kpiOk" class="kpi-value">0</strong>
+      </div>
+      <div class="kpi-card kpi-fail">
+        <span class="kpi-label">NO OK Se Corta</span>
+        <strong id="kpiFail" class="kpi-value">0</strong>
+      </div>
+      <div class="kpi-card kpi-fenix">
+        <span class="kpi-label">Ensayos con FENIX</span>
+        <strong id="kpiFenix" class="kpi-value">0</strong>
+      </div>
+    </section>
+
+    <!-- Buscador instantáneo y filtros dinámicos -->
+    <section class="filters-panel">
+      <div class="search-box">
+        <label for="searchInput">Buscador instantáneo por Principio Activo, Marca u Observación</label>
+        <div class="search-input-wrap">
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Ej: glifosato fomesafem, atrazina 2,4-d, cletodim, dicamba..."
+            autocomplete="off"
+          />
+          <button id="btnClearSearch" class="btn-icon" title="Limpiar búsqueda">✕</button>
+        </div>
+        <small class="hint">Podés escribir varios principios activos separados por espacio para filtrar mezclas que los contengan juntos.</small>
+      </div>
+
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label for="filterCompat">Compatibilizador</label>
+          <select id="filterCompat">
+            <option value="">Todos</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="filterUso">Forma de Uso</label>
+          <select id="filterUso">
+            <option value="">Todas</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="filterCaldo">Volumen de Caldo</label>
+          <select id="filterCaldo">
+            <option value="">Todos</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="filterResultado">Resultado Estabilidad</label>
+          <select id="filterResultado">
+            <option value="">Todos</option>
+            <option value="OK ESTABLE">OK ESTABLE</option>
+            <option value="NO OK SE CORTA">NO OK SE CORTA</option>
+          </select>
+        </div>
+
+        <div class="filter-group filter-reset-wrap">
+          <button id="btnResetFilters" class="btn btn-ghost">Limpiar filtros</button>
+        </div>
+      </div>
+
+      <div id="quickChips" class="quick-chips"></div>
+    </section>
+
+    <!-- Tabla principal -->
+    <section class="table-card">
+      <div class="table-header-bar">
+        <span id="tableStatusText">Cargando ensayos...</span>
+        <button id="btnResetLocal" class="btn-link" title="Restaurar los 153 ensayos originales desde data/ensayos.json">
+          Restaurar base original
+        </button>
+      </div>
+
+      <div class="table-responsive">
+        <table id="ensayosTable">
+          <thead>
+            <tr>
+              <th>N°</th>
+              <th>Activo 1</th>
+              <th>Dosis 1</th>
+              <th>Activo 2</th>
+              <th>Dosis 2</th>
+              <th>Activo 3</th>
+              <th>Dosis 3</th>
+              <th>Activo 4</th>
+              <th>Dosis 4</th>
+              <th>Activo 5</th>
+              <th>Dosis 5</th>
+              <th>Caldo</th>
+              <th>Compatibilizador</th>
+              <th>Dosis Comp.</th>
+              <th>Forma de Uso</th>
+              <th>Resultado</th>
+              <th>Observaciones</th>
+            </tr>
+          </thead>
+          <tbody id="ensayosBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal Nueva Mezcla -->
+  <div id="modalNuevaMezcla" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <h2>Registrar Nuevo Ensayo de Mezcla</h2>
+          <p>Completá los principios activos en L/Ha o Kg/Ha y los datos del compatibilizador.</p>
+        </div>
+        <button id="btnCloseModal" class="btn-icon">✕</button>
+      </div>
+
+      <form id="formNuevaMezcla" class="modal-body">
+        <!-- Alerta dinámica de repetición -->
+        <div id="duplicateAlertBox" class="duplicate-alert hidden">
+          <div class="duplicate-alert-header">
+            <strong>⚠️ Atención: Ya existen ensayos registrados con estos principios activos</strong>
+            <span id="duplicateCountBadge" class="badge-warn">0 coincidencia(s)</span>
+          </div>
+          <p class="duplicate-alert-sub">Revisá los antecedentes antes de guardar para evitar duplicar condiciones ya evaluadas:</p>
+          <div class="duplicate-table-wrap">
+            <table class="mini-table">
+              <thead>
+                <tr>
+                  <th>N°</th>
+                  <th>Mezcla (Activos y Dosis)</th>
+                  <th>Caldo</th>
+                  <th>Compatib.</th>
+                  <th>Uso</th>
+                  <th>Resultado</th>
+                  <th>Obs.</th>
+                </tr>
+              </thead>
+              <tbody id="duplicateMatchesBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="form-section-title">Principios Activos (hasta 5)</div>
+        <datalist id="activosSuggestions"></datalist>
+        <div id="activosInputsContainer" class="activos-grid"></div>
+
+        <div class="form-section-title">Condiciones del Caldo y Compatibilizador</div>
+        <div class="form-row-grid">
+          <div class="form-field">
+            <label for="inputCaldo">Volumen de Caldo (L/Ha) *</label>
+            <input type="number" id="inputCaldo" step="any" min="1" placeholder="Ej: 30" required />
+          </div>
+
+          <div class="form-field">
+            <label for="inputCompat">Compatibilizador *</label>
+            <input type="text" id="inputCompat" list="compatSuggestions" value="FENIX" required />
+            <datalist id="compatSuggestions">
+              <option value="FENIX"></option>
+              <option value="DRONE"></option>
+              <option value="MIX 80"></option>
+              <option value="EXITO"></option>
+              <option value="ALL OK"></option>
+              <option value="TOTAL MIX"></option>
+              <option value="OPTIMIX"></option>
+            </datalist>
+          </div>
+
+          <div class="form-field">
+            <label for="inputDosisCompat">Dosis Compatibilizador (mL) *</label>
+            <div class="input-with-suffix">
+              <input type="number" id="inputDosisCompat" step="any" min="0" placeholder="Ej: 200" required />
+              <span>mL</span>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label for="inputFormaUso">Forma de Uso *</label>
+            <select id="inputFormaUso" required>
+              <option value="PREVENTIVO">PREVENTIVO</option>
+              <option value="CORRECTIVO">CORRECTIVO</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="inputCorrector">Corrector de Agua</label>
+            <select id="inputCorrector">
+              <option value="No">No</option>
+              <option value="Sí">Sí</option>
+            </select>
+          </div>
+
+          <div class="form-field">
+            <label for="inputResultado">Resultado Estabilidad *</label>
+            <select id="inputResultado" required>
+              <option value="OK ESTABLE">OK ESTABLE</option>
+              <option value="NO OK SE CORTA">NO OK SE CORTA</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-field full-width">
+          <label for="inputObs">Observaciones / Orden de carga / Marcas comerciales</label>
+          <textarea id="inputObs" rows="2" placeholder="Ej: Orden: H2O - FENIX - GLIFOSATO - 2,4-D | Marcas: ..."></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" id="btnCancelModal" class="btn btn-ghost">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Ensayo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
